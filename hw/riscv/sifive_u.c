@@ -88,6 +88,7 @@ static const struct MemmapEntry {
 
 #define OTP_SERIAL          1
 #define GEM_REVISION        0x10070109
+#define MROM_RAMSIZE_OFFSET 0xf8
 
 static void create_fdt(SiFiveUState *s, const struct MemmapEntry *memmap,
     uint64_t mem_size, const char *cmdline)
@@ -496,6 +497,26 @@ static void sifive_u_machine_init(MachineState *machine)
     riscv_rom_copy_firmware_info(memmap[SIFIVE_U_MROM].base,
                                  memmap[SIFIVE_U_MROM].size,
                                  sizeof(reset_vec), kernel_entry);
+
+    /*
+     * Tell guest the machine ram size at MROM_RAMSIZE_OFFSET.
+     * On real hardware, the 64-bit value from MROM_RAMSIZE_OFFSET is zero.
+     * QEMU aware bootloader (e.g.: oreboot, U-Boot) can check value stored
+     * here to determine whether it is running in QEMU.
+     */
+
+    uint32_t ram_size[2] = {
+        machine->ram_size,
+        ((uint64_t)(machine->ram_size)) >> 32
+    };
+
+    /* copy in the ram size in little_endian byte order */
+    for (i = 0; i < ARRAY_SIZE(ram_size); i++) {
+        ram_size[i] = cpu_to_le32(ram_size[i]);
+    }
+    rom_add_blob_fixed_as("mrom.ram_size", ram_size, sizeof(ram_size),
+                          memmap[SIFIVE_U_MROM].base + MROM_RAMSIZE_OFFSET,
+                          &address_space_memory);
 }
 
 static bool sifive_u_machine_get_start_in_flash(Object *obj, Error **errp)
