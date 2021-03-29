@@ -177,7 +177,7 @@ static int hmode(CPURISCVState *env, int csrno)
 static int hmode32(CPURISCVState *env, int csrno)
 {
     if (!riscv_cpu_is_32bit(env)) {
-        return 0;
+        return -RISCV_EXCP_ILLEGAL_INST;
     }
 
     return hmode(env, csrno);
