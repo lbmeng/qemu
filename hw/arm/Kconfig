@@ -448,6 +448,13 @@ config STM32F405_SOC
     select STM32F4XX_SYSCFG
     select STM32F4XX_EXTI
 
+config NXP_S32G
+    bool
+    default y
+    depends on TCG && AARCH64
+    select ARM_GIC
+    select SERIAL
+
 config XLNX_ZYNQMP_ARM
     bool
     default y
