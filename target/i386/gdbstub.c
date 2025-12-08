@@ -110,7 +110,24 @@ static int gdb_get_reg(CPUX86State *env, GByteArray *mem_buf, target_ulong val)
             return gdb_get_reg64(mem_buf, val & 0xffffffffUL);
         }
     } else {
-        return gdb_get_reg32(mem_buf, val);
+        /* If not EIP, do as usual...*/
+        if (val != env->eip) {
+            return gdb_get_reg32(mem_buf, val);
+        }
+        /*
+         * ## Handle EIP ##
+         * qemu-system-i386 is handled here!
+         */
+
+        /* If in protected-mode, do as usual... */
+        if (env->cr[0] & 1) {
+            return gdb_get_reg32(mem_buf, env->eip);
+
+        /* Otherwise, returns the physical address. */
+        } else {
+            return gdb_get_reg32(mem_buf,
+                (env->segs[R_CS].selector * 0x10) + env->eip);
+        }
     }
 }
 
@@ -136,7 +153,22 @@ int x86_cpu_gdb_read_register(CPUState *cs, GByteArray *mem_buf, int n)
                 return gdb_get_regl(mem_buf, 0);
             }
         } else {
-            return gdb_get_reg32(mem_buf, env->regs[gpr_map32[n]]);
+            /*
+             * ## Handle ESP ##
+             * If in protected-mode, do as usual...
+             */
+            if (env->cr[0] & 1) {
+                return gdb_get_reg32(mem_buf, env->regs[gpr_map32[n]]);
+            }
+
+            /* If real mode & !ESP, do as usual... */
+            if (n != R_ESP) {
+                return gdb_get_reg32(mem_buf, env->regs[gpr_map32[n]]);
+            }
+
+            /* If ESP, return it converted. */
+            return gdb_get_reg32(mem_buf,
+                (env->segs[R_SS].selector * 0x10) + env->regs[gpr_map32[n]]);
         }
     } else if (n >= IDX_FP_REGS && n < IDX_FP_REGS + 8) {
         int st_index = n - IDX_FP_REGS;
