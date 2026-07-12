@@ -278,6 +278,7 @@ static void sdhci_set_inserted(DeviceState *dev, bool level)
         } else {
             s->prnsts = 0x1fa0000;
             timer_del(s->transfer_timer);
+            s->sdma_boundary_paused = false;
             s->pwrcon &= ~SDHC_POWER_ON;
             s->clkcon &= ~SDHC_CLOCK_SDCLK_EN;
             if (s->norintstsen & SDHC_NISEN_REMOVE) {
