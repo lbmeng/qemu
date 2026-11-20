@@ -301,7 +301,14 @@ static void phytium_e2000_create_gic(PhytiumE2000SoCState *s)
     qdev_prop_set_uint32(s->gic, "revision", 3);
     qdev_prop_set_uint32(s->gic, "num-cpu", s->num_cpus);
     qdev_prop_set_uint32(s->gic, "num-irq", PHYTIUM_E2000_NUM_IRQS + 32);
-    qdev_prop_set_bit(s->gic, "has-security-extensions", true);
+    /*
+     * A dual-security-state GIC only makes sense when the EL3 firmware
+     * (TF-A via PBR) is present to configure the secure side. Direct
+     * booting a kernel into NonSecure has no EL3, so model a single
+     * security state, matching what the firmware would have set up.
+     */
+    qdev_prop_set_bit(s->gic, "has-security-extensions",
+                      s->firmware_loaded);
     qdev_prop_set_bit(s->gic, "has-lpi", true);
 
     redist_region_count = qlist_new();
